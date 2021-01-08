@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
 
-import 'package:flutter/services.dart';
-import 'package:flutter_pigeon_plugin/flutter_pigeon_plugin.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_pigeon_plugin/message.dart';
 
 void main() {
   runApp(MyApp());
@@ -13,32 +12,32 @@ class MyApp extends StatefulWidget {
   _MyAppState createState() => _MyAppState();
 }
 
+class NativeCallFlutterApiImpl extends NativeCallFlutterApi{
+  @override
+  SearchReply query(SearchRequest arg) {
+    SearchReply reply = SearchReply();
+    reply.result = arg.query + "-flutterResult";
+    return reply;
+  }
+
+}
+
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
 
   @override
   void initState() {
     super.initState();
-    initPlatformState();
+
+    NativeCallFlutterApi.setup(NativeCallFlutterApiImpl());
   }
 
-  // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    try {
-      platformVersion = await FlutterPigeonPlugin.platformVersion;
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
-    }
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
-
+  Future<void> getNativeResult() async{
+    FlutterCallNativeApi api = FlutterCallNativeApi();
+    SearchRequest request = SearchRequest()..query = "Zero";
+    SearchReply reply = await api.search(request);
     setState(() {
-      _platformVersion = platformVersion;
+      _platformVersion = reply.result;
     });
   }
 
@@ -50,7 +49,24 @@ class _MyAppState extends State<MyApp> {
           title: const Text('Plugin example app'),
         ),
         body: Center(
-          child: Text('Running on: $_platformVersion\n'),
+
+          child: Column(
+
+            children: [
+              Text('Running on: $_platformVersion\n'),
+              MaterialButton(
+                  height: 40,
+                  color: Colors.blue,
+                  textColor: Colors.white,
+                  elevation: 5,
+                  splashColor: Colors.teal,
+                  padding: EdgeInsets.all(8),
+                  child: Text("点击调用 native"),
+                  onPressed: ()=>{
+                    getNativeResult()
+                  })
+            ],
+          ),
         ),
       ),
     );
