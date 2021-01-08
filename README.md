@@ -1,25 +1,19 @@
 # flutter_pigeon_plugin
 
-A new Flutter plugin.
-
-## Getting Started
-
-This project is a starting point for a Flutter
-[plug-in package](https://flutter.dev/developing-packages/),
-a specialized package that includes platform-specific implementation code for
-Android and/or iOS.
-
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+A new Flutter plugin use pigeon,  实现 flutter 和 native 互调（only Android,not iOS）.
 
 
+#### Pigeon的作用
 
-### 创建 Demo project
+Flutter官方提供的Pigeon插件，通过dart入口，生成双端通用的模板代码，Native部分只需通过重写模板内的接口，无需关心methodChannel部分的具体实现，入参，出参也均通过生成的模板代码进行约束。假设接口新增，或者参数修改，只需要在dart侧更新协议文件，生成双端模板，即可达到同步更新。
 
-在Android Studio中，创建 Demo project
+
 
 ### 创建 Plugin project
+
+#### 创建方式：
+1. 在`Android Studio 4.1.1`中，创建 flutter plugin project
+2. 控制台，命令行
 
 ```bash
 // The plugin project was generated without specifying the `--platforms` flag, no new platforms are added.
@@ -31,20 +25,20 @@ flutter create --org com.zero --template plugin flutterPigeon
 flutter create --org com.zero --template plugin  --platforms android,ios flutterPigeon
 ```
 
-
 > 注意 创建命令需要带 `--platforms android,ios`，才会创建 Android iOS目录
 
 
-修改 Android 配置
-
-为了在Android Studio 4.1.1中运行，需要修改 各个目录下的gradle和build配置
+#### 修改 Android 配置
+在`Android Studio 4.1.1`中运行，`gradle` 最低版本要求为 `6.5`,需要修改各个目录下的gradle和build配置
 
 修改内容如下：
 ```
 // android/gradle/wrapper/gradle-wrapper.properties
+// example/android/gradle/wrapper/gradle-wrapper.properties
 distributionUrl=https\://services.gradle.org/distributions/gradle-6.5-all.zip
 
 // android/build.gradle
+// example/android/app/build.gradle
 ext.kotlin_version = '1.3.72'
 repositories {
         maven { url 'https://maven.aliyun.com/repository/google' }
@@ -67,15 +61,9 @@ repositories {
         jcenter()
     }
 }
-
-// android/app/build.gradle
-kotlinOptions {
-        jvmTarget = '1.8'
-}
-
 ```
 
-至此，project 构建完成，可运行 demo和 flutterPlugin/example
+至此，project 构建完成，可运行 flutterPlugin/example
 
 ### 接入Pigeon
 #### 添加依赖
@@ -89,25 +77,281 @@ dependencies:
 ```
 然后按照官方的要求添加一个`pigeons`目录，这里我们放dart侧的入口文件，内容为接口、参数、返回值的定义，后面通过pigeon的命令，生产native端代码。
 
-```bash
+`pigeons/message.dart`
 
+```dart
+import 'package:pigeon/pigeon.dart';
+
+class SearchRequest {
+  String query;
+}
+
+class SearchReply {
+  String result;
+}
+
+/// flutter call native
+@HostApi()
+abstract class FlutterCallNativeApi {
+  SearchReply search(SearchRequest request);
+}
+
+/// native call flutter
+@FlutterApi()
+abstract class NativeCallFlutterApi{
+  SearchReply query(SearchRequest request);
+}
+
+// 输出配置
+// flutter pub run pigeon --input pigeons/message.dart
+void configurePigeon(PigeonOptions opts) {
+  opts.dartOut = './lib/message.dart';
+  opts.javaOut = 'android/src/main/kotlin/com/zero/flutter_pigeon_plugin/Pigeon.java';
+  opts.javaOptions.package = "com.zero.flutter_pigeon_plugin";
+  opts.objcHeaderOut = 'ios/Runner/Pigeon.h';
+  opts.objcSourceOut = 'ios/Runner/Pigeon.m';
+  opts.objcOptions.prefix = 'FLT';
+}
 ```
 
+`message.dart`文件中定义了请求参数类型、返回值类型、通信的接口以及pigeon输出的配置。
+
+这里`@HostApi()`标注了通信对象和接口的定义，后续需要在`native`侧注册该对象，在`flutter`侧通过该对象的实例来调用接口。
+这里`@FlutterApi()`标注了通信对象和接口的定义，后续需要在`flutter`侧注册该对象，在`native`侧通过该对象的实例来调用接口。
+
+`configurePigeon`为执行pigeon生产双端模板代码的输出配置(`输出路径文件夹需先创建， 如 ios/Runner/`)。
+
+- `dartOut`为dart侧输出位置
+- `objcHeaderOut、objcSourceOut`为iOS侧输出位置
+- `prefix`为插件默认的前缀
+- `javaOut、javaOptions.package`为Android侧输出位置和包名
+
+之后我们只需要执行如下命令，就可以生成对应的代码到指定目录中。
+
+```
 flutter pub run pigeon --input pigeons/message.dart
+```
+
+- `--input`为我们的输入文件
 
 解决 `Android native`生成的代码`Pigeon`中的错误
 ```
-// flutterPigeon/android/build.gradle
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
+// android/build.gradle
+    android {
+        compileOptions {
+            sourceCompatibility JavaVersion.VERSION_1_8
+            targetCompatibility JavaVersion.VERSION_1_8
+        }
 
-    kotlinOptions {
-        jvmTarget = '1.8'
+        kotlinOptions {
+            jvmTarget = '1.8'
+        }
     }
 ```
 
+
+##### 实现 flutter 与 native 互调（only Android端）
+
+##### flutter调用native
+
+##### android plugin
+`android/src/main/kotlin/com/zero/flutter_pigeon_plugin/FlutterPigeonPlugin.kt`
+
+```kotlin
+class FlutterPigeonPlugin: FlutterPlugin, FlutterCallNativeApi {
+  override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    context = flutterPluginBinding.applicationContext
+
+    // setup
+    FlutterCallNativeApi.setup(flutterPluginBinding.binaryMessenger, this)
+  }
+
+  override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+    FlutterCallNativeApi.setup(binding.binaryMessenger, null)
+  }
+
+  // flutter call native
+  override fun search(arg: SearchRequest?): SearchReply {
+    val reply = SearchReply()
+    reply.result = arg!!.query + "-nativeResult"
+    return reply
+  }
+
+}
+```
+
+
+###### example demo使用
+####### Android侧
+
+`example/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java`，build时自动生成
+
+```java
+/**
+ * Generated file. Do not edit.
+ * This file is generated by the Flutter tool based on the
+ * plugins that support the Android platform.
+ */
+@Keep
+public final class GeneratedPluginRegistrant {
+  public static void registerWith(@NonNull FlutterEngine flutterEngine) {
+    flutterEngine.getPlugins().add(new com.zero.flutter_pigeon_plugin.FlutterPigeonPlugin());
+  }
+}
+```
+
+`example/android/app/src/main/kotlin/com/zero/flutter_pigeon_plugin_example/MainActivity.kt`
+```
+class MainActivity: FlutterActivity() {
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        // notice : here will auto call
+        // flutterEngine.getPlugins().add(new com.zero.flutter_pigeon_plugin.FlutterPigeonPlugin());
+        super.configureFlutterEngine(flutterEngine)
+    }
+}
+```
+> `super.configureFlutterEngine(flutterEngine)`中通过反射，调用了`GeneratedPluginRegistrant.registerWith()`
+
+####### flutter 侧
+
+`example/lib/main.dart`
+
+```dart
+class _MyAppState extends State<MyApp> {
+  String _platformVersion = 'Unknown';
+
+  Future<void> getNativeResult() async{
+    FlutterCallNativeApi api = FlutterCallNativeApi();
+    SearchRequest request = SearchRequest()..query = "Zero";
+    SearchReply reply = await api.search(request);
+    setState(() {
+      _platformVersion = reply.result;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('Plugin example app'),
+        ),
+        body: Center(
+
+          child: Column(
+
+            children: [
+              Text('Running on: $_platformVersion\n'),
+              MaterialButton(
+                  height: 40,
+                  color: Colors.blue,
+                  textColor: Colors.white,
+                  elevation: 5,
+                  splashColor: Colors.teal,
+                  padding: EdgeInsets.all(8),
+                  child: Text("点击调用 native"),
+                  onPressed: ()=>{
+                    getNativeResult()
+                  })
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+```
+
+##### native 调用 flutter
+
+##### android plugin
+`android/src/main/kotlin/com/zero/flutter_pigeon_plugin/FlutterPigeonPlugin.kt`
+
+```kotlin
+class FlutterPigeonPlugin: FlutterPlugin, FlutterCallNativeApi {
+
+  lateinit var nativeApi : NativeCallFlutterApi
+  lateinit var context: Context
+  
+  override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    context = flutterPluginBinding.applicationContext
+
+    // setup
+    FlutterCallNativeApi.setup(flutterPluginBinding.binaryMessenger, this)
+    
+    nativeApi = NativeCallFlutterApi(flutterPluginBinding.binaryMessenger)
+  }
+
+  override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+    FlutterCallNativeApi.setup(binding.binaryMessenger, null)
+  }
+
+  // flutter call native
+  override fun search(arg: SearchRequest?): SearchReply {
+    val reply = SearchReply()
+    reply.result = arg!!.query + "-nativeResult"
+    
+    // ------ native call flutter
+    nativeApi.query(arg, object : NativeCallFlutterApi.Reply<SearchReply>{
+      override fun reply(reply: SearchReply?) {
+        // flutter reply
+        Toast.makeText(context, reply!!.result, Toast.LENGTH_SHORT).show()
+      }
+    })
+    // -------
+
+    // native reply flutter
+    
+    
+    return reply
+  }
+
+}
+```
+
+
+###### example demo使用
+
+####### flutter 侧
+
+`example/lib/main.dart`
+
+```dart
+class NativeCallFlutterApiImpl extends NativeCallFlutterApi{
+  @override
+  SearchReply query(SearchRequest arg) {
+    SearchReply reply = SearchReply();
+    reply.result = arg.query + "-flutterResult";
+    return reply;
+  }
+
+}
+
+
+class _MyAppState extends State<MyApp> {
+  String _platformVersion = 'Unknown';
+  
+  @override
+  void initState() {
+    super.initState();
+
+    NativeCallFlutterApi.setup(NativeCallFlutterApiImpl());
+  }
+
+}
+
+```
+
+
+
+
+参考
+
+1. [pigeon_plugin_example](https://github.com/gaaclarke/pigeon_plugin_example)
+
+2. [Pigeon- Flutter多端接口一致性以及规范化管理实践](https://mp.weixin.qq.com/s/E24bY7nt2HL0Pl-vEkECXg)
 
 
 
