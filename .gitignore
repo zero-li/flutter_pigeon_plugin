@@ -1,0 +1,10 @@
+.DS_Store
+.dart_tool/
+
+.packages
+.pub/
+
+build/
+.idea/
+pubspec.lock
+/flutter_pigeon_plugin.iml
