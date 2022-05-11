@@ -29,36 +29,32 @@ flutter create --org com.zero --template plugin  --platforms android,ios flutter
 
 
 #### 修改 Android 配置
-在`Android Studio 4.1.1`中运行，`gradle` 最低版本要求为 `6.5`,需要修改各个目录下的gradle和build配置
+在`Android Studio arctic fox/2020.3.1 `中运行，`gradle` 版本要求为 `7.0.2`,需要修改各个目录下的gradle和build配置
 
 修改内容如下：
 ```
 // android/gradle/wrapper/gradle-wrapper.properties
 // example/android/gradle/wrapper/gradle-wrapper.properties
-distributionUrl=https\://services.gradle.org/distributions/gradle-6.5-all.zip
+distributionUrl=https\://services.gradle.org/distributions/gradle-7.0.2-bin.zip
 
 // android/build.gradle
 // example/android/app/build.gradle
-ext.kotlin_version = '1.3.72'
-repositories {
-        maven { url 'https://maven.aliyun.com/repository/google' }
-        maven { url 'https://maven.aliyun.com/repository/jcenter' }
-        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
-        google()
-        jcenter()
- }
- dependencies {
-        classpath 'com.android.tools.build:gradle:4.1.1'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
- }
- 
- allprojects {
+    ext.kotlin_version = '1.5.20'
     repositories {
-        maven { url 'https://maven.aliyun.com/repository/google' }
-        maven { url 'https://maven.aliyun.com/repository/jcenter' }
-        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
         google()
-        jcenter()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.0.4'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.6.10"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
     }
 }
 ```
@@ -73,7 +69,7 @@ repositories {
 dependencies:
   flutter:
     sdk: flutter
-  pigeon: 0.1.17
+  pigeon: 3.0.3
 ```
 然后按照官方的要求添加一个`pigeons`目录，这里我们放dart侧的入口文件，内容为接口、参数、返回值的定义，后面通过pigeon的命令，生产native端代码。
 
@@ -81,6 +77,22 @@ dependencies:
 
 ```dart
 import 'package:pigeon/pigeon.dart';
+
+// 输出配置
+// 控制台执行：flutter pub run pigeon --input pigeons/message.dart
+@ConfigurePigeon(PigeonOptions(
+  dartOut: './lib/message.dart',
+  javaOut: 'android/src/main/kotlin/com/zero/flutter_pigeon_plugin/Pigeon.java',
+  javaOptions: JavaOptions(
+    className: 'Pigeon',
+    package: 'com.zero.flutter_pigeon_plugin',
+  ),
+  objcHeaderOut: 'ios/Runner/Pigeon.h',
+  objcSourceOut: 'ios/Runner/Pigeon.m',
+  objcOptions: ObjcOptions(
+    prefix: 'FLT',
+  ),
+))
 
 class SearchRequest {
   String query;
@@ -102,16 +114,8 @@ abstract class NativeCallFlutterApi{
   SearchReply query(SearchRequest request);
 }
 
-// 输出配置
-// flutter pub run pigeon --input pigeons/message.dart
-void configurePigeon(PigeonOptions opts) {
-  opts.dartOut = './lib/message.dart';
-  opts.javaOut = 'android/src/main/kotlin/com/zero/flutter_pigeon_plugin/Pigeon.java';
-  opts.javaOptions.package = "com.zero.flutter_pigeon_plugin";
-  opts.objcHeaderOut = 'ios/Runner/Pigeon.h';
-  opts.objcSourceOut = 'ios/Runner/Pigeon.m';
-  opts.objcOptions.prefix = 'FLT';
-}
+
+
 ```
 
 `message.dart`文件中定义了请求参数类型、返回值类型、通信的接口以及pigeon输出的配置。
@@ -288,23 +292,22 @@ class FlutterPigeonPlugin: FlutterPlugin, FlutterCallNativeApi {
     FlutterCallNativeApi.setup(binding.binaryMessenger, null)
   }
 
+
   // flutter call native
-  override fun search(arg: SearchRequest?): SearchReply {
-    val reply = SearchReply()
-    reply.result = arg!!.query + "-nativeResult"
-    
+  override fun search(arg: SearchRequest): SearchReply {
+    val reply = SearchReply.Builder().setResult(arg.query + "-nativeResult").build()
+
+
     // ------ native call flutter
     nativeApi.query(arg, object : NativeCallFlutterApi.Reply<SearchReply>{
-      override fun reply(reply: SearchReply?) {
+      override fun reply(reply: SearchReply) {
         // flutter reply
-        Toast.makeText(context, reply!!.result, Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, reply.result, Toast.LENGTH_SHORT).show()
       }
     })
     // -------
 
     // native reply flutter
-    
-    
     return reply
   }
 
@@ -322,8 +325,7 @@ class FlutterPigeonPlugin: FlutterPlugin, FlutterCallNativeApi {
 class NativeCallFlutterApiImpl extends NativeCallFlutterApi{
   @override
   SearchReply query(SearchRequest arg) {
-    SearchReply reply = SearchReply();
-    reply.result = arg.query + "-flutterResult";
+    SearchReply reply = SearchReply(result: arg.query + "-flutterResult");
     return reply;
   }
 
@@ -349,9 +351,13 @@ class _MyAppState extends State<MyApp> {
 
 参考
 
-1. [pigeon_plugin_example](https://github.com/gaaclarke/pigeon_plugin_example)
+1. [Pigeon- github message](https://github.com/flutter/packages/blob/main/packages/pigeon/pigeons/message.dart)
 
-2. [Pigeon- Flutter多端接口一致性以及规范化管理实践](https://mp.weixin.qq.com/s/E24bY7nt2HL0Pl-vEkECXg)
+2. [pigeon_plugin_example](https://github.com/gaaclarke/pigeon_plugin_example)
+
+3. [Pigeon- Flutter多端接口一致性以及规范化管理实践](https://mp.weixin.qq.com/s/E24bY7nt2HL0Pl-vEkECXg)
+
+
 
 
 

@@ -15,8 +15,7 @@ class MyApp extends StatefulWidget {
 class NativeCallFlutterApiImpl extends NativeCallFlutterApi{
   @override
   SearchReply query(SearchRequest arg) {
-    SearchReply reply = SearchReply();
-    reply.result = arg.query + "-flutterResult";
+    SearchReply reply = SearchReply(result: arg.query + "-flutterResult");
     return reply;
   }
 

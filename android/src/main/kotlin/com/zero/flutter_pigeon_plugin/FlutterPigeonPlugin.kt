@@ -27,15 +27,15 @@ class FlutterPigeonPlugin: FlutterPlugin, FlutterCallNativeApi {
   }
 
   // flutter call native
-  override fun search(arg: SearchRequest?): SearchReply {
-    val reply = SearchReply()
-    reply.result = arg!!.query + "-nativeResult"
+  override fun search(arg: SearchRequest): SearchReply {
+    val reply = SearchReply.Builder().setResult(arg.query + "-nativeResult").build()
+
 
     // ------ native call flutter
     nativeApi.query(arg, object : NativeCallFlutterApi.Reply<SearchReply>{
-      override fun reply(reply: SearchReply?) {
+      override fun reply(reply: SearchReply) {
         // flutter reply
-        Toast.makeText(context, reply!!.result, Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, reply.result, Toast.LENGTH_SHORT).show()
       }
     })
     // -------
@@ -43,6 +43,8 @@ class FlutterPigeonPlugin: FlutterPlugin, FlutterCallNativeApi {
     // native reply flutter
     return reply
   }
+
+
 
 
 }

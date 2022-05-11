@@ -5,6 +5,34 @@
 ///
 import 'package:pigeon/pigeon.dart';
 
+@ConfigurePigeon(PigeonOptions(
+  dartOut: './lib/message.dart',
+  javaOut: 'android/src/main/kotlin/com/zero/flutter_pigeon_plugin/Pigeon.java',
+  javaOptions: JavaOptions(
+    className: 'Pigeon',
+    package: 'com.zero.flutter_pigeon_plugin',
+  ),
+  objcHeaderOut: 'ios/Runner/Pigeon.h',
+  objcSourceOut: 'ios/Runner/Pigeon.m',
+  objcOptions: ObjcOptions(
+    prefix: 'FLT',
+  ),
+))
+
+// 输出配置
+// flutter pub run pigeon --input pigeons/message.dart
+// void configurePigeon(PigeonOptions opts) {
+//   String dartOut = './lib/message.dart';
+//   String javaOut = 'android/src/main/kotlin/com/zero/flutter_pigeon_plugin/Pigeon.java';
+//   String javaOptions_package = "com.zero.flutter_pigeon_plugin";
+//   String objcHeaderOut = 'ios/Runner/Pigeon.h';
+//   String objcSourceOut = 'ios/Runner/Pigeon.m';
+//   String objcOptions_prefix = 'FLT';
+//
+//
+// }
+
+
 class SearchRequest {
   String query;
 }
@@ -23,15 +51,4 @@ abstract class FlutterCallNativeApi {
 @FlutterApi()
 abstract class NativeCallFlutterApi{
   SearchReply query(SearchRequest request);
-}
-
-// 输出配置
-// flutter pub run pigeon --input pigeons/message.dart
-void configurePigeon(PigeonOptions opts) {
-  opts.dartOut = './lib/message.dart';
-  opts.javaOut = 'android/src/main/kotlin/com/zero/flutter_pigeon_plugin/Pigeon.java';
-  opts.javaOptions.package = "com.zero.flutter_pigeon_plugin";
-  opts.objcHeaderOut = 'ios/Runner/Pigeon.h';
-  opts.objcSourceOut = 'ios/Runner/Pigeon.m';
-  opts.objcOptions.prefix = 'FLT';
 }

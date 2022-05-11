@@ -1,7 +1,6 @@
 name: flutter_pigeon_plugin
 description: A new Flutter plugin.
 version: 0.0.1
-author:
 homepage:
 
 environment:
@@ -11,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  pigeon: 0.1.17
+  pigeon: 3.0.3
 
 dev_dependencies:
   flutter_test:
