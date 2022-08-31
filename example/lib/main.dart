@@ -33,7 +33,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> getNativeResult() async{
     FlutterCallNativeApi api = FlutterCallNativeApi();
-    SearchRequest request = SearchRequest()..query = "Zero";
+    SearchRequest request = SearchRequest(query: "Zero");
     SearchReply reply = await api.search(request);
     setState(() {
       _platformVersion = reply.result;

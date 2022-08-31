@@ -5,6 +5,10 @@
 ///
 import 'package:pigeon/pigeon.dart';
 
+
+
+// 输出配置
+// 控制台执行：flutter pub run pigeon --input pigeons/message.dart
 @ConfigurePigeon(PigeonOptions(
   dartOut: './lib/message.dart',
   javaOut: 'android/src/main/kotlin/com/zero/flutter_pigeon_plugin/Pigeon.java',
@@ -20,7 +24,7 @@ import 'package:pigeon/pigeon.dart';
 ))
 
 // 输出配置
-// flutter pub run pigeon --input pigeons/message.dart
+//
 // void configurePigeon(PigeonOptions opts) {
 //   String dartOut = './lib/message.dart';
 //   String javaOut = 'android/src/main/kotlin/com/zero/flutter_pigeon_plugin/Pigeon.java';
@@ -34,11 +38,11 @@ import 'package:pigeon/pigeon.dart';
 
 
 class SearchRequest {
-  String query;
+  late String query;
 }
 
 class SearchReply {
-  String result;
+  late String result;
 }
 
 /// flutter call native
