@@ -11,11 +11,16 @@ import 'package:pigeon/pigeon.dart';
 // 控制台执行：flutter pub run pigeon --input pigeons/message.dart
 @ConfigurePigeon(PigeonOptions(
   dartOut: './lib/message.dart',
-  javaOut: 'android/src/main/kotlin/com/zero/flutter_pigeon_plugin/Pigeon.java',
-  javaOptions: JavaOptions(
-    className: 'Pigeon',
+  kotlinOut: 'android/src/main/kotlin/com/zero/flutter_pigeon_plugin/Pigeon.kt',
+  kotlinOptions: KotlinOptions(
+   // copyrightHeader: ['zero'],
     package: 'com.zero.flutter_pigeon_plugin',
   ),
+  // javaOut: 'android/src/main/kotlin/com/zero/flutter_pigeon_plugin/Pigeon.java',
+  // javaOptions: JavaOptions(
+  //   className: 'Pigeon',
+  //   package: 'com.zero.flutter_pigeon_plugin',
+  // ),
   objcHeaderOut: 'ios/Runner/Pigeon.h',
   objcSourceOut: 'ios/Runner/Pigeon.m',
   objcOptions: ObjcOptions(
