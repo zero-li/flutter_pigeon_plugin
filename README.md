@@ -12,7 +12,7 @@ Flutter官方提供的Pigeon插件，通过dart入口，生成双端通用的模
 ### 创建 Plugin project
 
 #### 创建方式：
-1. 在`Android Studio Chipmunk | 2021.2.1 Patch 2`中，创建 flutter plugin project
+1. 在`Android Studio`中，创建 flutter plugin project
 2. 控制台，命令行
 
 ```bash
@@ -29,7 +29,7 @@ flutter create --org com.zero --template plugin  --platforms android,ios flutter
 
 
 #### 修改 Android 配置
-在`Android Studio Chipmunk | 2021.2.1 Patch 2 `中运行，`gradle` 版本要求为 `7.0.2`,需要修改各个目录下的gradle和build配置
+在`Android Studio `中运行，`gradle` 版本要求为 `7.0.2`,需要修改各个目录下的gradle和build配置
 
 修改内容如下：
 ```
@@ -69,7 +69,7 @@ allprojects {
 dependencies:
   flutter:
     sdk: flutter
-  pigeon: 4.0.2
+  pigeon: 4.2.15
 ```
 然后按照官方的要求添加一个`pigeons`目录，这里我们放dart侧的入口文件，内容为接口、参数、返回值的定义，后面通过pigeon的命令，生产native端代码。
 
@@ -82,9 +82,9 @@ import 'package:pigeon/pigeon.dart';
 // 控制台执行：flutter pub run pigeon --input pigeons/message.dart
 @ConfigurePigeon(PigeonOptions(
   dartOut: './lib/message.dart',
-  javaOut: 'android/src/main/kotlin/com/zero/flutter_pigeon_plugin/Pigeon.java',
-  javaOptions: JavaOptions(
-    className: 'Pigeon',
+  kotlinOut: 'android/src/main/kotlin/com/zero/flutter_pigeon_plugin/Pigeon.kt',
+  kotlinOptions: KotlinOptions(
+   // copyrightHeader: ['zero'],
     package: 'com.zero.flutter_pigeon_plugin',
   ),
   objcHeaderOut: 'ios/Runner/Pigeon.h',
@@ -128,7 +128,7 @@ abstract class NativeCallFlutterApi{
 - `dartOut`为dart侧输出位置
 - `objcHeaderOut、objcSourceOut`为iOS侧输出位置
 - `prefix`为插件默认的前缀
-- `javaOut、javaOptions.package`为Android侧输出位置和包名
+- `kotlinOut、kotlinOptions.package`为Android侧输出位置和包名
 
 之后我们只需要执行如下命令，就可以生成对应的代码到指定目录中。
 
@@ -167,17 +167,24 @@ class FlutterPigeonPlugin: FlutterPlugin, FlutterCallNativeApi {
     context = flutterPluginBinding.applicationContext
 
     // setup
-    FlutterCallNativeApi.setup(flutterPluginBinding.binaryMessenger, this)
+    FlutterCallNativeApi.setUp(flutterPluginBinding.binaryMessenger, this)
   }
 
   override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-    FlutterCallNativeApi.setup(binding.binaryMessenger, null)
+    FlutterCallNativeApi.setUp(binding.binaryMessenger, null)
   }
 
   // flutter call native
-  override fun search(arg: SearchRequest?): SearchReply {
-    val reply = SearchReply()
-    reply.result = arg!!.query + "-nativeResult"
+  override fun search(arg: SearchRequest): SearchReply {
+    val reply = SearchReply(arg.query + "-nativeResult")
+
+    // ------ native call flutter
+    nativeApi.query(arg){
+      Toast.makeText(context, reply.result, Toast.LENGTH_SHORT).show()
+    }
+    // -------
+
+    // native reply flutter
     return reply
   }
 
@@ -186,7 +193,8 @@ class FlutterPigeonPlugin: FlutterPlugin, FlutterCallNativeApi {
 
 
 ###### example demo使用
-####### Android侧
+
+> Android侧
 
 `example/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java`，build时自动生成
 
@@ -217,7 +225,7 @@ class MainActivity: FlutterActivity() {
 ```
 > `super.configureFlutterEngine(flutterEngine)`中通过反射，调用了`GeneratedPluginRegistrant.registerWith()`
 
-####### flutter 侧
+> flutter 侧
 
 `example/lib/main.dart`
 
@@ -317,7 +325,7 @@ class FlutterPigeonPlugin: FlutterPlugin, FlutterCallNativeApi {
 
 ###### example demo使用
 
-####### flutter 侧
+> flutter 侧
 
 `example/lib/main.dart`
 
