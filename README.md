@@ -1,6 +1,6 @@
 # flutter_pigeon_plugin
 
-A new Flutter plugin use pigeon,  实现 flutter 和 native 互调（only Android,not iOS）.
+A new Flutter plugin use pigeon,  实现 flutter 和 native 互调（ Android, iOS）.
 
 
 #### Pigeon的作用
@@ -35,7 +35,7 @@ flutter create --org com.zero --template plugin  --platforms android,ios flutter
 ```
 // android/gradle/wrapper/gradle-wrapper.properties
 // example/android/gradle/wrapper/gradle-wrapper.properties
-distributionUrl=https\://services.gradle.org/distributions/gradle-7.0.2-bin.zip
+distributionUrl=https\://services.gradle.org/distributions/gradle-7.4-bin.zip
 
 // android/build.gradle
 // example/android/app/build.gradle
@@ -69,7 +69,7 @@ allprojects {
 dependencies:
   flutter:
     sdk: flutter
-  pigeon: 4.2.15
+  pigeon: 9.0.4
 ```
 然后按照官方的要求添加一个`pigeons`目录，这里我们放dart侧的入口文件，内容为接口、参数、返回值的定义，后面通过pigeon的命令，生产native端代码。
 
@@ -87,8 +87,9 @@ import 'package:pigeon/pigeon.dart';
    // copyrightHeader: ['zero'],
     package: 'com.zero.flutter_pigeon_plugin',
   ),
-  objcHeaderOut: 'ios/Runner/Pigeon.h',
-  objcSourceOut: 'ios/Runner/Pigeon.m',
+  //see ios/flutter_pigeon_plugin.podspec -> s.source_files = 'Classes/**/*'
+  objcHeaderOut: 'ios/Classes/Pigeon.h',
+  objcSourceOut: 'ios/Classes/Pigeon.m',
   objcOptions: ObjcOptions(
     prefix: 'FLT',
   ),
@@ -286,13 +287,13 @@ class FlutterPigeonPlugin: FlutterPlugin, FlutterCallNativeApi {
 
   lateinit var nativeApi : NativeCallFlutterApi
   lateinit var context: Context
-  
+
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     context = flutterPluginBinding.applicationContext
 
     // setup
     FlutterCallNativeApi.setup(flutterPluginBinding.binaryMessenger, this)
-    
+
     nativeApi = NativeCallFlutterApi(flutterPluginBinding.binaryMessenger)
   }
 
@@ -321,6 +322,103 @@ class FlutterPigeonPlugin: FlutterPlugin, FlutterCallNativeApi {
 
 }
 ```
+
+
+##### iOS plugin
+
+`ios/Classes/FlutterPigeonPlugin.h`
+
+```c
+#import <Flutter/Flutter.h>
+
+#import "Pigeon.h"
+
+@interface FlutterPigeonPlugin : NSObject<FlutterPlugin>
+
+@end
+
+
+@interface FlutterCallNativeApi : NSObject<FLTFlutterCallNativeApi>
+
+- (void)setupFLTNativeCallFlutterApiWithBinaryMessenger:(id<FlutterBinaryMessenger>)binaryMessenger;
+
+@end
+
+
+```
+
+`ios/Classes/FlutterPigeonPlugin.m`
+
+```c
+#import "FlutterPigeonPlugin.h"
+#if __has_include(<flutter_pigeon_plugin/flutter_pigeon_plugin-Swift.h>)
+#import <flutter_pigeon_plugin/flutter_pigeon_plugin-Swift.h>
+#else
+#import "flutter_pigeon_plugin-Swift.h"
+#endif
+
+#import <UIKit/UIKit.h>
+
+@implementation FlutterPigeonPlugin
++ (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
+  [SwiftFlutterPigeonPlugin registerWithRegistrar:registrar];
+
+
+
+  FlutterCallNativeApi *api = [[FlutterCallNativeApi alloc] init];
+
+  [api setupFLTNativeCallFlutterApiWithBinaryMessenger:[registrar messenger]];
+
+  FLTFlutterCallNativeApiSetup([registrar messenger], api);
+
+}
+
+- (BOOL)application:(UIApplication*)application
+    didFinishLaunchingWithOptions:(NSDictionary*)launchOptions
+{
+  NSLog(@"didFinishLaunchingWithOptions");
+  return YES;
+}
+
+@end
+
+
+
+@interface FlutterCallNativeApi ()
+
+@property(nonatomic, strong) FLTNativeCallFlutterApi *nativeCallFlutterApi;
+
+@end
+
+
+@implementation  FlutterCallNativeApi
+
+- (nullable FLTSearchReply *)searchRequest:(FLTSearchRequest *)request error:(FlutterError *_Nullable *_Nonnull)error
+{
+        NSString *result = @"flutter call iOS ";
+        FLTSearchReply *reply = [FLTSearchReply makeWithResult:result];
+
+
+        [self.nativeCallFlutterApi  queryRequest:[FLTSearchRequest makeWithQuery:@"iOS call flutter"] completion:^(FLTSearchReply *_Nullable reply, FlutterError * _Nullable error) {
+
+
+                NSLog(@"queryRequest-> queryRequest : %@", reply.result);
+
+        }];
+
+        return reply;
+
+
+}
+
+- (void)setupFLTNativeCallFlutterApiWithBinaryMessenger:(id<FlutterBinaryMessenger>)binaryMessenger
+{
+        self.nativeCallFlutterApi = [[FLTNativeCallFlutterApi alloc] initWithBinaryMessenger:binaryMessenger];
+}
+
+@end
+```
+
 
 
 ###### example demo使用
@@ -364,8 +462,6 @@ class _MyAppState extends State<MyApp> {
 2. [pigeon_plugin_example](https://github.com/gaaclarke/pigeon_plugin_example)
 
 3. [Pigeon- Flutter多端接口一致性以及规范化管理实践](https://mp.weixin.qq.com/s/E24bY7nt2HL0Pl-vEkECXg)
-
-
 
 
 
