@@ -21,8 +21,8 @@ import 'package:pigeon/pigeon.dart';
   //   className: 'Pigeon',
   //   package: 'com.zero.flutter_pigeon_plugin',
   // ),
-  objcHeaderOut: 'ios/Runner/Pigeon.h',
-  objcSourceOut: 'ios/Runner/Pigeon.m',
+  objcHeaderOut: 'ios/Classes/Pigeon.h',
+  objcSourceOut: 'ios/Classes/Pigeon.m',
   objcOptions: ObjcOptions(
     prefix: 'FLT',
   ),
